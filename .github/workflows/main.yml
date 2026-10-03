@@ -1,0 +1,37 @@
+name: Build Revision Master APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract project
+        run: |
+          mkdir project
+          unzip -q RevisionMaster_GitHub_Build.zip -d project
+          cd project
+          find . -maxdepth 2 -type f | head -50
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Build APK
+        working-directory: project/RevisionMasterAndroid
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: RevisionMaster-debug-apk
+          path: project/RevisionMasterAndroid/app/build/outputs/apk/debug/app-debug.apk
