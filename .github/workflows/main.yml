@@ -2,6 +2,9 @@ name: Build Revision Master APK
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
   build:
@@ -15,8 +18,23 @@ jobs:
         run: |
           mkdir project
           unzip -q RevisionMaster_GitHub_Build.zip -d project
-          cd project
-          find . -maxdepth 2 -type f | head -50
+
+      - name: Find Android project
+        run: |
+          GRADLEW=$(find project -type f -name gradlew | head -n 1)
+
+          if [ -z "$GRADLEW" ]; then
+            echo "ERROR: gradlew was not found in the ZIP"
+            find project -maxdepth 4 -type f | head -100
+            exit 1
+          fi
+
+          PROJECT_DIR=$(dirname "$GRADLEW")
+
+          echo "Found gradlew at: $GRADLEW"
+          echo "Project directory: $PROJECT_DIR"
+
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -24,15 +42,15 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Gradle
-  uses: gradle/actions/setup-gradle@v4
-
-- name: Build APK
-  working-directory: project/RevisionMasterAndroid
-  run: gradle assembleDebug
+      - name: Build APK
+        run: |
+          cd "$PROJECT_DIR"
+          chmod +x gradlew
+          ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: RevisionMaster-debug-apk
-          path: project/RevisionMasterAndroid/app/build/outputs/apk/debug/app-debug.apk
+          name: RevisionMaster-APK
+          path: |
+            **/build/outputs/apk/**/*.apk
